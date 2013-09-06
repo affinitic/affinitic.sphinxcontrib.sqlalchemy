@@ -29,6 +29,4 @@ setup(name='affinitic.sphinxcontrib.sqlalchemy',
       namespace_packages=['affinitic', 'affinitic.sphinxcontrib'],
       include_package_data=True,
       zip_safe=False,
-      install_requires=[
-          'setuptools']
-      )
+      install_requires=['setuptools'])
