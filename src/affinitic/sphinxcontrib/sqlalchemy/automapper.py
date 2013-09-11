@@ -21,6 +21,44 @@ class MapperDocumenter(sphinx.ext.autodoc.ClassDocumenter):
     def can_document_member(cls, member, membername, isattr, parent):
         return isinstance(member, MappedClassBase)
 
+    def add_content(self, more_content, no_docstring=False):
+        # Revert back to default since the docstring *is* the correct thing to
+        # display here.
+        sphinx.ext.autodoc.ClassDocumenter.add_content(
+            self, more_content, no_docstring)
+        table = self.object.__table__
+        if table.schema:
+            self.add_line(u'* Schéma = %s\n' % table.schema, '<autodoc>')
+        if len(table.indexes) > 0:
+            self.add_line(u'* Index:\n', '<autodoc>')
+
+        indexes = []
+        for index in table.indexes:
+            if index.name in indexes:
+                continue
+            columns = ', '.join(['%s.%s' % (c.table.name, c.name) for c
+                                 in index.expressions])
+            unique = index.unique and ' (UNIQUE)' or ''
+
+            where_expr = index.kwargs.get('postgres_where')
+            where = ''
+            if where_expr is not None:
+                where = ' Condition : ``%s = %s``' % (where_expr.left.name,
+                                                      where_expr.right)
+
+            self.add_line(u'    * %s : ``%s``%s%s\n' % (index.name, columns,
+                                                        where, unique),
+                          '<autodoc>')
+            indexes.append(index.name)
+        # Relations for the declarative mappers
+        #if hasattr(self.object, '_relations_keys') and \
+        #   len(self.object._relations_keys) > 0:
+        #    self.add_line(u'* Relations :\n', '<autodoc>')
+
+        #    for relation_name in self.object._relations_keys:
+        #        relation = getattr(self.object, relation_name)
+        #        self.add_line(u'    * %s' % relation.key, '<autodoc>')
+
     def format_args(self):
         return self.object.getSignatureString()
 
@@ -78,19 +116,19 @@ class MapperDocumenter(sphinx.ext.autodoc.ClassDocumenter):
 
             keep = False
             if want_all and membername.startswith('__') and \
-                   membername.endswith('__') and len(membername) > 4:
+               membername.endswith('__') and len(membername) > 4:
                 # special __methods__
                 if self.options.special_members is ALL and \
                         membername != '__doc__':
                     keep = has_doc or self.options.undoc_members
                 elif self.options.special_members and \
-                     self.options.special_members is not ALL and \
+                    self.options.special_members is not ALL and \
                         membername in self.options.special_members:
                     keep = has_doc or self.options.undoc_members
             elif want_all and membername.startswith('_'):
                 # ignore members whose name starts with _ by default
                 keep = self.options.private_members and \
-                       (has_doc or self.options.undoc_members)
+                    (has_doc or self.options.undoc_members)
             elif (namespace, membername) in attr_docs:
                 # keep documented attributes
                 keep = True
@@ -130,7 +168,23 @@ class ColumnAttributeDocumenter(sphinx.ext.autodoc.AttributeDocumenter):
         # display here.
         sphinx.ext.autodoc.ClassLevelDocumenter.add_content(
             self, more_content, no_docstring)
-        self.add_line(u'   Type = Integer', '<autodoc>')
+        column = self.parent.__table__.c.get(self.object.name)
+        self.add_line(u'* Type : ``%s``\n' % column.type, '<autodoc>')
+        if column.primary_key is True:
+            self.add_line(u'* Clé primaire\n', '<autodoc>')
+        if column.default:
+            self.add_line(u'* Default : ``%s``\n' % column.default.arg,
+                          '<autodoc>')
+        if column.unique is True:
+            self.add_line(u'* Unique\n', '<autodoc>')
+        if column.nullable is False:
+            self.add_line(u'* Requis\n', '<autodoc>')
+        for fk in column.foreign_keys:
+            self.add_line(
+                u'* ForeignKey : ``%(table)s.%(column)s``' % {
+                    u'table': fk.column.table.name,
+                    u'column': fk.column.name},
+                '<autodoc>')
 
     def get_doc(self, encoding=None, ignore=1):
         content = self.env.config.autoclass_content
@@ -158,7 +212,6 @@ class ColumnAttributeDocumenter(sphinx.ext.autodoc.AttributeDocumenter):
                 docstring = force_decode(docstring, encoding)
             doc.append(prepare_docstring(docstring))
         return doc
-
 
 
 class MapperDirective(sphinx.domains.python.PyClasslike):
