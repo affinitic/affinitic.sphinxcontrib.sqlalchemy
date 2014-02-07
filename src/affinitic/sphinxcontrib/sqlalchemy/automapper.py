@@ -7,6 +7,8 @@ from sphinx.util import force_decode
 from sphinx.util.docstrings import prepare_docstring
 from sphinx.locale import l_
 
+from sqlalchemy.sql import distinct
+
 from affinitic.db.mapper import MappedClassBase
 
 
@@ -181,10 +183,34 @@ class ColumnAttributeDocumenter(sphinx.ext.autodoc.AttributeDocumenter):
             self.add_line(u'* Requis\n', '<autodoc>')
         for fk in column.foreign_keys:
             self.add_line(
-                u'* ForeignKey : ``%(table)s.%(column)s``' % {
+                u'* ForeignKey : ``%(table)s.%(column)s (%(relation)s)``' % {
                     u'table': fk.column.table.name,
-                    u'column': fk.column.name},
+                    u'column': fk.column.name,
+                    u'relation': self.get_fk_relationship(column, fk)},
                 '<autodoc>')
+
+    def get_fk_relationship(self, column, fk):
+        """ Return a string to describe the foreign key relationship """
+        table_side = 'm'
+        relation_side = 'n'
+        if self.test_column_uniqueness(column) is True:
+            table_side = '1'
+        if self.test_column_uniqueness(fk.column) is True:
+            relation_side = '1'
+
+        return u'%s:%s' % (table_side, relation_side)
+
+    def test_column_uniqueness(self, column):
+        if column.unique is True:
+            return True
+        session = self.parent._session()
+        row_count = session.query(column).count()
+        if row_count == 0:
+            return False
+        distinct_count = session.query(distinct(column)).count()
+        if row_count == distinct_count:
+            return True
+        return False
 
     def get_doc(self, encoding=None, ignore=1):
         content = self.env.config.autoclass_content
