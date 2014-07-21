@@ -168,14 +168,18 @@ class ColumnAttributeDocumenter(sphinx.ext.autodoc.AttributeDocumenter):
     def add_content(self, more_content, no_docstring=False):
         # Revert back to default since the docstring *is* the correct thing to
         # display here.
+        import sqlalchemy as sa
         sphinx.ext.autodoc.ClassLevelDocumenter.add_content(
             self, more_content, no_docstring)
         column = self.parent.__table__.c.get(self.object.name)
         self.add_line(u'* Type : ``%s``\n' % column.type, '<autodoc>')
         if column.primary_key is True:
             self.add_line(u'* Clé primaire\n', '<autodoc>')
-        if column.default:
+        if column.default and isinstance(column.default, sa.Sequence) is False:
             self.add_line(u'* Default : ``%s``\n' % column.default.arg,
+                          '<autodoc>')
+        if column.default and isinstance(column.default, sa.Sequence) is True:
+            self.add_line(u'* Séquence : ``%s``\n' % column.default.name,
                           '<autodoc>')
         if column.unique is True:
             self.add_line(u'* Unique\n', '<autodoc>')
