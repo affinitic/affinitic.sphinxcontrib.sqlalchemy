@@ -160,6 +160,13 @@ class ColumnAttributeDocumenter(sphinx.ext.autodoc.AttributeDocumenter):
     directivetype = 'attribute'      # Formats as a 'attribute' for now
     priority = 100 + sphinx.ext.autodoc.AttributeDocumenter.priority
 
+    def get_attr(self, obj, part, *defargs):
+        try:
+            return super(ColumnAttributeDocumenter, self).get_attr(obj, part,
+                                                                   *defargs)
+        except AttributeError:
+            return obj.__table__.c.get(part)
+
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
         import sqlalchemy
