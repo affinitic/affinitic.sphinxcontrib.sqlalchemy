@@ -178,6 +178,8 @@ class ColumnAttributeDocumenter(sphinx.ext.autodoc.AttributeDocumenter):
         import sqlalchemy as sa
         sphinx.ext.autodoc.ClassLevelDocumenter.add_content(
             self, more_content, no_docstring)
+        if not isinstance(self.object, sa.orm.attributes.InstrumentedAttribute):
+            return
         column = self.parent.__table__.c.get(self.object.name)
         self.add_line(u'* Type : ``%s``\n' % column.type, '<autodoc>')
         if column.primary_key is True:
