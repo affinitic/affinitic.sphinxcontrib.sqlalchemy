@@ -172,13 +172,19 @@ class ColumnAttributeDocumenter(sphinx.ext.autodoc.AttributeDocumenter):
         import sqlalchemy
         return isinstance(member, sqlalchemy.schema.Column)
 
+    def add_directive_header(self, sig):
+        sphinx.ext.autodoc.ClassLevelDocumenter.add_directive_header(self, sig)
+        if not self._datadescriptor:
+            return
+
     def add_content(self, more_content, no_docstring=False):
         # Revert back to default since the docstring *is* the correct thing to
         # display here.
         import sqlalchemy as sa
         sphinx.ext.autodoc.ClassLevelDocumenter.add_content(
             self, more_content, no_docstring)
-        if not isinstance(self.object, sa.orm.attributes.InstrumentedAttribute):
+        if not isinstance(self.object, sa.orm.attributes.InstrumentedAttribute) and \
+           not isinstance(self.object, sa.Column):
             return
         column = self.parent.__table__.c.get(self.object.name)
         self.add_line(u'* Type : ``%s``\n' % column.type, '<autodoc>')
