@@ -186,7 +186,7 @@ class ColumnAttributeDocumenter(sphinx.ext.autodoc.AttributeDocumenter):
         if not isinstance(self.object, sa.orm.attributes.InstrumentedAttribute) and \
            not isinstance(self.object, sa.Column):
             return
-        column = self.parent.__table__.c.get(self.object.name)
+        column = self.parent.__table__.c.get(self.object.key)
         self.add_line(u'* Type : ``%s``\n' % column.type, '<autodoc>')
         if column.primary_key is True:
             self.add_line(u'* Clé primaire\n', '<autodoc>')
