@@ -227,6 +227,7 @@ class ColumnAttributeDocumenter(sphinx.ext.autodoc.AttributeDocumenter):
         if row_count == 0:
             return False
         distinct_count = session.query(distinct(column)).count()
+        session.close()
         if row_count == distinct_count:
             return True
         return False
